@@ -1,4 +1,4 @@
-import { Reward } from '../types';
+import type { Reward } from '../types';
 
 export const mockRewards: Reward[] = [
   {

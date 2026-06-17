@@ -1,4 +1,4 @@
-import { RedemptionRecord } from '../types';
+import type { RedemptionRecord } from '../types';
 
 export const mockRedemptions: RedemptionRecord[] = [
   {

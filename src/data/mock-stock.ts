@@ -1,4 +1,4 @@
-import { StockStatus } from '../types';
+import type { StockStatus } from '../types';
 {/* This will trigger a low-stock alert!*/}
 export const mockStock: StockStatus[] = [
   { rewardId: 'rw-1', currentStock: 14, minStockThreshold: 5 },
