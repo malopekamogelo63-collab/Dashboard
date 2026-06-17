@@ -24,5 +24,14 @@ export const mockRewards: Reward[] = [
     pointsCost: 2000,
     category: 'Gift Cards',
     imageUrl: 'https://images.unsplash.com/photo-1549463565-f72beba68404?w=500'
+  },
+  {
+    id: 'rw-4',
+    name: 'R100 Starbucks Voucher',
+    description: 'Fuel your coding sessions with a premium coffee blend.',
+    pointsCost: 1000,
+    category: 'Vouchers',
+    imageUrl: 'https://images.unsplash.com/photo-1541167760496-1628856ab772?w=500'
   }
+  
 ];
