@@ -2,6 +2,7 @@ import { useState } from 'react';
 import Sidebar from './components/Sidebar';
 import Analytics from './components/Analytics';
 import RewardsGrid from './components/RewardsGrid';
+import RedemptionsLog from './components/RedemptionsLog';
 
 export default function App() {
   // Manage which view is currently active: 'dashboard' | 'catalog' | 'redemptions'
@@ -15,12 +16,7 @@ export default function App() {
       case 'catalog':
         return <RewardsGrid />;
       case 'redemptions':
-        return (
-          <div style={{ backgroundColor: '#fff', borderRadius: '12px', padding: '2rem', border: '1px solid #e2e8f0' }}>
-            <h3 style={{ margin: 0, color: '#0f172a', fontFamily: 'system-ui, sans-serif' }}>Redemptions Log</h3>
-            <p style={{ color: '#64748b', marginTop: '0.5rem', fontFamily: 'system-ui, sans-serif' }}>Transaction records and user claims will map out here...</p>
-          </div>
-        );
+        return <RedemptionsLog />;
       default:
         return <Analytics />;
     }
