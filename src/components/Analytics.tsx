@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useState } from 'react';
 import { mockRewards } from '../data/mock-rewards';
 import { mockStock } from '../data/mock-stock';
@@ -36,21 +37,22 @@ export default function Analytics() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
-  const totalRewards = mockRewards.length;
-  const totalRedemptions = mockRedemptions.length;
+  // 1. Memoize the length checks
+const totalRewards = useMemo(() => mockRewards.length, [mockRewards]);
+const totalRedemptions = useMemo(() => mockRedemptions.length, [mockRedemptions]);
 
-  // Process the full list with calculated statuses
-  const processedStockItems = mockStock.map(item => {
+// 2. Memoize the expensive data mapping loop
+const processedStockItems = useMemo(() => {
+  return mockStock.map(item => {
     const matchingReward = mockRewards.find(r => r.id === item.rewardId);
-    const displayName = matchingReward ? matchingReward.name : `Unknown Reward (${item.rewardId})`;
-    const healthStatus = determineHealthStatus(item.currentStock, item.minStockThreshold);
-
+    
     return {
       ...item,
-      displayName,
-      healthStatus
+      displayName: matchingReward ? matchingReward.name : `Unknown Reward (${item.rewardId})`,
+      healthStatus: determineHealthStatus(item.currentStock, item.minStockThreshold)
     };
   });
+}, [mockStock, mockRewards]); // Only runs again if stock or rewards change!
 
   // Calculate dynamic low stock alerts based on our business rule function
   const lowStockAlerts = processedStockItems.filter(item => item.healthStatus === 'low_stock' || item.healthStatus === 'out_of_stock').length;
