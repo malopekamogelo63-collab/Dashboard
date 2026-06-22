@@ -1,19 +1,18 @@
 import { InsightsPanel } from './InsightsPanel';
-import { useMemo } from 'react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { mockRewards } from '../data/mock-rewards';
 import { mockStock } from '../data/mock-stock';
 import { mockRedemptions } from '../data/mock-redemptions';
 
-// 1. Business Rules: Comprehensive reward health function
-const determineHealthStatus = (currentStock: number, minStockThreshold: number) => {
+// 1. Business Rules: Explicit type literal return to satisfy TypeScript rules
+const determineHealthStatus = (currentStock: number, minStockThreshold: number): 'healthy' | 'low_stock' | 'out_of_stock' => {
   if (currentStock === 0) return 'out_of_stock';
   if (currentStock <= minStockThreshold) return 'low_stock';
   return 'healthy';
 };
 
 // Goal 4: Priority Levels Engine
-const determinePriorityLevel = (status: string) => {
+const determinePriorityLevel = (status: 'healthy' | 'low_stock' | 'out_of_stock') => {
   switch (status) {
     case 'out_of_stock': return { text: 'High', color: '#991b1b', bg: '#fef2f2' };
     case 'low_stock': return { text: 'Medium', color: '#9a3412', bg: '#fff7ed' };
@@ -50,7 +49,7 @@ export default function Analytics() {
   const totalRewards = useMemo(() => mockRewards.length, []);
   const totalRedemptions = useMemo(() => mockRedemptions.length, []);
 
-  // Expensive data mapping loop with priorities injected
+  // Expensive data mapping loop with strict typing preserved
   const processedStockItems = useMemo(() => {
     return mockStock.map(item => {
       const matchingReward = mockRewards.find(r => r.id === item.rewardId);
@@ -139,7 +138,6 @@ export default function Analytics() {
             Reward Health Monitor
           </h3>
           
-          {/* Controls UI: Search, Filters, and New CSV Button */}
           <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
             <input
               type="text"
@@ -159,7 +157,6 @@ export default function Analytics() {
               <option value="out_of_stock">Out of Stock</option>
             </select>
 
-            {/* Goal 2: Export Button Markup */}
             <button
               onClick={exportToCSV}
               style={{
@@ -215,7 +212,6 @@ export default function Analytics() {
                         {badge.text}
                       </span>
                     </td>
-                    {/* Goal 4: Priority Badge Column */}
                     <td style={{ padding: '1rem' }}>
                       <span style={{ display: 'inline-block', padding: '0.25rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '700', backgroundColor: item.priority.bg, color: item.priority.color }}>
                         {item.priority.text}
