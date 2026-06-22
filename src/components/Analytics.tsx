@@ -1,3 +1,4 @@
+import { InsightsPanel } from './InsightsPanel';
 import { useMemo } from 'react';
 import { useState } from 'react';
 import { mockRewards } from '../data/mock-rewards';
@@ -9,6 +10,16 @@ const determineHealthStatus = (currentStock: number, minStockThreshold: number) 
   if (currentStock === 0) return 'out_of_stock';
   if (currentStock <= minStockThreshold) return 'low_stock';
   return 'healthy';
+};
+
+// Goal 4: Priority Levels Engine
+const determinePriorityLevel = (status: string) => {
+  switch (status) {
+    case 'out_of_stock': return { text: 'High', color: '#991b1b', bg: '#fef2f2' };
+    case 'low_stock': return { text: 'Medium', color: '#9a3412', bg: '#fff7ed' };
+    case 'healthy':
+    default: return { text: 'Low', color: '#166534', bg: '#f0fdf4' };
+  }
 };
 
 const getRecommendedAction = (status: string) => {
@@ -33,36 +44,59 @@ const getStatusBadgeStyles = (status: string) => {
 };
 
 export default function Analytics() {
-  // Interactive UI States for Filters
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
-  // 1. Memoize the length checks
-const totalRewards = useMemo(() => mockRewards.length, [mockRewards]);
-const totalRedemptions = useMemo(() => mockRedemptions.length, [mockRedemptions]);
+  const totalRewards = useMemo(() => mockRewards.length, []);
+  const totalRedemptions = useMemo(() => mockRedemptions.length, []);
 
-// 2. Memoize the expensive data mapping loop
-const processedStockItems = useMemo(() => {
-  return mockStock.map(item => {
-    const matchingReward = mockRewards.find(r => r.id === item.rewardId);
-    
-    return {
-      ...item,
-      displayName: matchingReward ? matchingReward.name : `Unknown Reward (${item.rewardId})`,
-      healthStatus: determineHealthStatus(item.currentStock, item.minStockThreshold)
-    };
-  });
-}, [mockStock, mockRewards]); // Only runs again if stock or rewards change!
+  // Expensive data mapping loop with priorities injected
+  const processedStockItems = useMemo(() => {
+    return mockStock.map(item => {
+      const matchingReward = mockRewards.find(r => r.id === item.rewardId);
+      const healthStatus = determineHealthStatus(item.currentStock, item.minStockThreshold);
+      
+      return {
+        ...item,
+        displayName: matchingReward ? matchingReward.name : `Unknown Reward (${item.rewardId})`,
+        healthStatus,
+        priority: determinePriorityLevel(healthStatus)
+      };
+    });
+  }, []);
 
-  // Calculate dynamic low stock alerts based on our business rule function
   const lowStockAlerts = processedStockItems.filter(item => item.healthStatus === 'low_stock' || item.healthStatus === 'out_of_stock').length;
 
-  // Apply Search by Reward Name & Filter by Health Status
   const filteredStockItems = processedStockItems.filter(item => {
     const matchesSearch = item.displayName.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || item.healthStatus === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  // Goal 2: Client-side CSV Exporter Utility Function
+  const exportToCSV = () => {
+    const headers = ['Reward Name', 'Current Stock', 'Min Threshold', 'Health Status', 'Priority Level', 'Recommended Action'];
+    
+    const rows = filteredStockItems.map(item => [
+      `"${item.displayName.replace(/"/g, '""')}"`,
+      item.currentStock,
+      item.minStockThreshold,
+      item.healthStatus.toUpperCase(),
+      item.priority.text,
+      `"${getRecommendedAction(item.healthStatus)}"`
+    ]);
+
+    const csvContent = "data:text/csv;charset=utf-8," 
+      + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `reward_inventory_report_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <div style={{ backgroundColor: '#f8fafc', minHeight: '100vh', padding: '2rem', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
@@ -76,6 +110,8 @@ const processedStockItems = useMemo(() => {
           Real-time reward metrics and tracking status.
         </p>
       </div>
+
+      <InsightsPanel items={processedStockItems} />
 
       {/* Summary Cards Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
@@ -98,13 +134,13 @@ const processedStockItems = useMemo(() => {
       {/* Table & Controls Container */}
       <div style={{ backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '1.5rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
         
-        <div style={{ display: 'flex', justifyContent: 'space-beteen', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
           <h3 style={{ fontSize: '1.1rem', fontWeight: '600', color: '#0f172a', margin: 0, flex: 1 }}>
             Reward Health Monitor
           </h3>
           
-          {/* Controls UI: Search and Filters */}
-          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          {/* Controls UI: Search, Filters, and New CSV Button */}
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
             <input
               type="text"
               placeholder="Search by reward name..."
@@ -122,6 +158,26 @@ const processedStockItems = useMemo(() => {
               <option value="low_stock">Low Stock</option>
               <option value="out_of_stock">Out of Stock</option>
             </select>
+
+            {/* Goal 2: Export Button Markup */}
+            <button
+              onClick={exportToCSV}
+              style={{
+                padding: '0.5rem 1rem',
+                borderRadius: '8px',
+                border: '1px solid #0284c7',
+                backgroundColor: '#0ea5e9',
+                color: '#fff',
+                fontSize: '0.875rem',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'background-color 0.2s'
+              }}
+              onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#0284c7')}
+              onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#0ea5e9')}
+            >
+              📥 Export CSV
+            </button>
           </div>
         </div>
         
@@ -132,13 +188,14 @@ const processedStockItems = useMemo(() => {
               <th style={{ padding: '0.75rem 1rem', fontWeight: '600' }}>Reward Name</th>
               <th style={{ padding: '0.75rem 1rem', fontWeight: '600' }}>Stock Level</th>
               <th style={{ padding: '0.75rem 1rem', fontWeight: '600' }}>Health Status</th>
+              <th style={{ padding: '0.75rem 1rem', fontWeight: '600' }}>Priority</th>
               <th style={{ padding: '0.75rem 1rem', fontWeight: '600' }}>Recommended Action</th>
             </tr>
           </thead>
           <tbody>
             {filteredStockItems.length === 0 ? (
               <tr>
-                <td colSpan={4} style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.9rem' }}>
+                <td colSpan={5} style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.9rem' }}>
                   No matching rewards found.
                 </td>
               </tr>
@@ -156,6 +213,12 @@ const processedStockItems = useMemo(() => {
                     <td style={{ padding: '1rem' }}>
                       <span style={{ display: 'inline-block', padding: '0.25rem 0.625rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '600', backgroundColor: badge.backgroundColor, color: badge.color, border: badge.border }}>
                         {badge.text}
+                      </span>
+                    </td>
+                    {/* Goal 4: Priority Badge Column */}
+                    <td style={{ padding: '1rem' }}>
+                      <span style={{ display: 'inline-block', padding: '0.25rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '700', backgroundColor: item.priority.bg, color: item.priority.color }}>
+                        {item.priority.text}
                       </span>
                     </td>
                     <td style={{ padding: '1rem', color: item.healthStatus === 'healthy' ? '#64748b' : '#334155', fontWeight: item.healthStatus !== 'healthy' ? '500' : 'normal' }}>
